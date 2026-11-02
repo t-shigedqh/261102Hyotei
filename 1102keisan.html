@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学習評価判定ツール</title>
+    <style>
+        /* ==========================================================================
+           1. 基本スタイル・リセット (純粋なCSSのみで高速かつレスポンシブに対応)
+           ========================================================================== */
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            
+            /* ランク・評価カラー */
+            --rank-a: #16a34a;
+            --rank-b: #d97706;
+            --rank-c: #dc2626;
+            --grade-bg: #eff6ff;
+            --grade-text: #1e40af;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 540px;
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            padding: 24px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            color: var(--text-main);
+            margin-bottom: 6px;
+        }
+
+        header p {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        /* ==========================================================================
+           2. フォーム領域のスタイル
+           ========================================================================== */
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 1.1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            appearance: textfield;
+        }
+
+        /* 数値インプットのスピンボタン調整 */
+        .form-control::-webkit-outer-spin-button,
+        .form-control::-webkit-inner-spin-button {
+            opacity: 1;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+        }
+
+        .unit {
+            position: absolute;
+            right: 16px;
+            color: var(--text-muted);
+            font-weight: 500;
+            pointer-events: none;
+        }
+
+        /* ボタン群 */
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: #e2e8f0;
+            color: #475569;
+        }
+
+        .btn-secondary:hover {
+            background-color: #cbd5e1;
+        }
+
+        /* エラーメッセージ */
+        .error-message {
+            color: var(--rank-c);
+            font-size: 0.85rem;
+            margin-top: 6px;
+            display: none;
+            font-weight: 500;
+        }
+
+        /* ==========================================================================
+           3. 結果表示領域のスタイル
+           ========================================================================== */
+        .result-container {
+            margin-top: 28px;
+            padding-top: 24px;
+            border-top: 2px dashed var(--border-color);
+            display: none; /* 初期状態は非表示 */
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        /* 観点別ランクテーブル/リスト */
+        .rank-list {
+            list-style: none;
+            margin-bottom: 20px;
+        }
+
+        .rank-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+
+        .rank-name {
+            font-weight: 500;
+        }
+
+        .rank-value-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .rank-score {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .badge {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 1.05rem;
+        }
+
+        .badge-a { background-color: var(--rank-a); }
+        .badge-b { background-color: var(--rank-b); }
+        .badge-c { background-color: var(--rank-c); }
+
+        /* 最終評価カード */
+        .summary-card {
+            background-color: var(--grade-bg);
+            border: 2px solid #bfdbfe;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .average-score {
+            font-size: 0.95rem;
+            color: #1e3a8a;
+            margin-bottom: 8px;
+        }
+
+        .final-grade {
+            font-size: 1.1rem;
+            color: #1e3a8a;
+            font-weight: 700;
+        }
+
+        .final-grade-number {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: var(--grade-text);
+            line-height: 1;
+            margin: 4px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>学習評価判定ツール</h1>
+            <p>各観点の点数（0〜100）を入力してください</p>
+        </header>
+
+        <!-- 入力フォーム -->
+        <form id="evaluationForm" onsubmit="calculateEvaluation(event)">
+            
+            <!-- 観点1 -->
+            <div class="form-group">
+                <label for="score1">1. 知識・技能</label>
+                <div class="input-wrapper">
+                    <input type="number" id="score1" class="form-control" min="0" max="100" step="1" placeholder="0〜100" required>
+                    <span class="unit">点</span>
+                </div>
+            </div>
+
+            <!-- 観点2 -->
+            <div class="form-group">
+                <label for="score2">2. 思考・判断・表現力</label>
+                <div class="input-wrapper">
+                    <input type="number" id="score2" class="form-control" min="0" max="100" step="1" placeholder="0〜100" required>
+                    <span class="unit">点</span>
+                </div>
+            </div>
+
+            <!-- 観点3 -->
+            <div class="form-group">
+                <label for="score3">3. 主体的に取り組む態度</label>
+                <div class="input-wrapper">
+                    <input type="number" id="score3" class="form-control" min="0" max="100" step="1" placeholder="0〜100" required>
+                    <span class="unit">点</span>
+                </div>
+            </div>
+
+            <!-- エラー表示用 -->
+            <div id="errorMessage" class="error-message">0から100までの正しい数値を入力してください。</div>
+
+            <!-- 操作ボタン -->
+            <div class="button-group">
+                <button type="submit" class="btn btn-primary">判定実行</button>
+                <button type="button" class="btn btn-secondary" onclick="resetForm()">リセット</button>
+            </div>
+        </form>
+
+        <!-- 判定結果表示領域 -->
+        <div id="resultContainer" class="result-container">
+            <h2 class="result-title">判定結果</h2>
+            
+            <!-- 観点別判定 -->
+            <ul class="rank-list">
+                <li class="rank-item">
+                    <span class="rank-name">知識・技能</span>
+                    <div class="rank-value-group">
+                        <span id="score1Display" class="rank-score">0点</span>
+                        <span id="rank1Badge" class="badge">A</span>
+                    </div>
+                </li>
+                <li class="rank-item">
+                    <span class="rank-name">思考・判断・表現力</span>
+                    <div class="rank-value-group">
+                        <span id="score2Display" class="rank-score">0点</span>
+                        <span id="rank2Badge" class="badge">A</span>
+                    </div>
+                </li>
+                <li class="rank-item">
+                    <span class="rank-name">主体的に取り組む態度</span>
+                    <div class="rank-value-group">
+                        <span id="score3Display" class="rank-score">0点</span>
+                        <span id="rank3Badge" class="badge">A</span>
+                    </div>
+                </li>
+            </ul>
+
+            <!-- 総合評価 -->
+            <div class="summary-card">
+                <div class="average-score">平均点（四捨五入）: <strong id="averageScore">0</strong> 点</div>
+                <div class="final-grade">最終 5段階評価</div>
+                <div id="finalGrade" class="final-grade-number">5</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * 観点スコアから ABC ランクを判定する関数
+         * @param {number} score - 0〜100の点数
+         * @returns {string} - 'A', 'B', 'C'
+         */
+        function getRank(score) {
+            if (score >= 70) {
+                return 'A';
+            } else if (score >= 40) {
+                return 'B';
+            } else {
+                return 'C';
+            }
+        }
+
+        /**
+         * 平均点から 5段階評価を判定する関数
+         * @param {number} avgScore - 四捨五入済みの平均点
+         * @returns {number} - 1〜5の評価
+         */
+        function get5StageGrade(avgScore) {
+            if (avgScore >= 80) {
+                return 5;
+            } else if (avgScore >= 65) {
+                return 4;
+            } else if (avgScore >= 50) {
+                return 3;
+            } else if (avgScore >= 40) {
+                return 2;
+            } else {
+                return 1;
+            }
+        }
+
+        /**
+         * バッジの表示スタイルを更新する関数
+         * @param {HTMLElement} element - バッジのDOM要素
+         * @param {string} rank - 'A', 'B', 'C'
+         */
+        function updateBadge(element, rank) {
+            element.textContent = rank;
+            element.className = 'badge'; // クラスをリセット
+            if (rank === 'A') element.classList.add('badge-a');
+            else if (rank === 'B') element.classList.add('badge-b');
+            else if (rank === 'C') element.classList.add('badge-c');
+        }
+
+        /**
+         * フォーム送信時の計算・表示メイン処理
+         * @param {Event} event 
+         */
+        function calculateEvaluation(event) {
+            // フォームの標準送信処理（ページ再読み込み）を防止
+            event.preventDefault();
+
+            // 要素取得
+            const val1 = parseFloat(document.getElementById('score1').value);
+            const val2 = parseFloat(document.getElementById('score2').value);
+            const val3 = parseFloat(document.getElementById('score3').value);
+            const errorElement = document.getElementById('errorMessage');
+
+            // 入力値バリデーション (0~100かつ数値かチェック)
+            if (isNaN(val1) || isNaN(val2) || isNaN(val3) ||
+                val1 < 0 || val1 > 100 ||
+                val2 < 0 || val2 > 100 ||
+                val3 < 0 || val3 > 100) {
+                errorElement.style.display = 'block';
+                return;
+            } else {
+                errorElement.style.display = 'none';
+            }
+
+            // 1. 各観点の個別ランク判定
+            const rank1 = getRank(val1);
+            const rank2 = getRank(val2);
+            const rank3 = getRank(val3);
+
+            // 2. 平均点の計算と整数への四捨五入
+            const roundedAverage = Math.round((val1 + val2 + val3) / 3);
+
+            // 3. 平均点からの5段階評価判定
+            const finalGrade = get5StageGrade(roundedAverage);
+
+            // 4. 画面への出力反映
+            // 点数
+            document.getElementById('score1Display').textContent = val1 + '点';
+            document.getElementById('score2Display').textContent = val2 + '点';
+            document.getElementById('score3Display').textContent = val3 + '点';
+
+            // バッジ (A/B/C)
+            updateBadge(document.getElementById('rank1Badge'), rank1);
+            updateBadge(document.getElementById('rank2Badge'), rank2);
+            updateBadge(document.getElementById('rank3Badge'), rank3);
+
+            // 平均点と5段階評価
+            document.getElementById('averageScore').textContent = roundedAverage;
+            document.getElementById('finalGrade').textContent = finalGrade;
+
+            // 結果エリアを表示
+            const resultContainer = document.getElementById('resultContainer');
+            resultContainer.style.display = 'block';
+
+            // 結果部分までスムーズにスクロール（スマホ向けUX）
+            resultContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        /**
+         * フォームのリセット処理
+         */
+        function resetForm() {
+            // フォームのリセット
+            document.getElementById('evaluationForm').reset();
+            // エラー表示非表示
+            document.getElementById('errorMessage').style.display = 'none';
+            // 結果エリア非表示
+            document.getElementById('resultContainer').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
